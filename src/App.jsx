@@ -104,6 +104,35 @@ export default function App() {
     setEditingRecord(null);
   };
 
+  /** 記録の並べ替え（ドラッグ&ドロップ） */
+  const reorderRecords = (activeId, overId) => {
+    setRecords(prev => {
+      const today = getTodayString();
+      const todayRecs = prev
+        .filter(r => r.date === today)
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      const otherRecs = prev.filter(r => r.date !== today);
+
+      const oldIndex = todayRecs.findIndex(r => r.id === activeId);
+      const newIndex = todayRecs.findIndex(r => r.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+
+      // 配列内で要素を移動
+      const reordered = [...todayRecs];
+      const [moved] = reordered.splice(oldIndex, 1);
+      reordered.splice(newIndex, 0, moved);
+
+      // タイムスタンプを振り直して順序を維持
+      const baseTime = new Date(reordered[0].timestamp).getTime();
+      const updated = reordered.map((rec, idx) => ({
+        ...rec,
+        timestamp: new Date(baseTime + idx * 1000).toISOString()
+      }));
+
+      return [...otherRecs, ...updated];
+    });
+  };
+
   /** 設定を更新 */
   const updateSettings = (updates) => {
     setSettings(prev => ({ ...prev, ...updates }));
@@ -147,6 +176,7 @@ export default function App() {
             updateSettings={updateSettings}
             onEdit={setEditingRecord}
             onDelete={setDeleteTargetId}
+            onReorder={reorderRecords}
           />
         )}
 

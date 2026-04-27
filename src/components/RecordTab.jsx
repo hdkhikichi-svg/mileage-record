@@ -32,7 +32,8 @@ export default function RecordTab({
   settings,
   updateSettings,
   onEdit,
-  onDelete
+  onDelete,
+  onReorder
 }) {
   const {
     locationList,
@@ -592,6 +593,7 @@ export default function RecordTab({
           baseLocation={baseLocation}
           onEdit={onEdit}
           onDelete={onDelete}
+          onReorder={onReorder}
         />
       </div>
     </div>

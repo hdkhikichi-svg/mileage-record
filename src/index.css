@@ -795,6 +795,45 @@ body {
   font-weight: 600;
 }
 
+/* ドラッグハンドル */
+.flow__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 40px;
+  cursor: grab;
+  color: var(--gray-300);
+  flex-shrink: 0;
+  touch-action: none;
+  transition: color var(--transition-fast);
+  margin-right: -0.25rem;
+}
+
+.flow__drag-handle:hover {
+  color: var(--primary-400);
+}
+
+.flow__drag-handle:active {
+  cursor: grabbing;
+  color: var(--primary-600);
+}
+
+/* ドラッグ中のノード */
+.flow__step[style*="opacity: 0.5"] {
+  background: var(--primary-50);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+/* タイトル横のヒントテキスト */
+.flow__title-hint {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: var(--gray-400);
+  margin-left: auto;
+}
+
 /* === 13. 記録アイテム (履歴リスト) === */
 .record-item {
   background: white;
