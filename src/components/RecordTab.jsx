@@ -192,7 +192,7 @@ export default function RecordTab({
       }
 
       if (lastRecord) {
-        // manualDistanceが入力されていればそちらを優先（自動算出結果も含む）
+        // まず Google Maps / 手動入力の値を取得
         if (manualDistance && !isNaN(parseFloat(manualDistance))) {
           dist = parseFloat(manualDistance);
           if (calcResult) {
@@ -202,6 +202,15 @@ export default function RecordTab({
           }
         } else {
           dist = listModeDistance;
+        }
+
+        // 距離表に値がある場合は常に最優先で上書き
+        if (useMatrix) {
+          const matrixDist = getMatrixDistance(distanceMatrix, lastRecord.destination, targetLocation);
+          if (matrixDist > 0) {
+            dist = matrixDist;
+            method = '距離表';
+          }
         }
       } else {
         dist = 0;
@@ -220,6 +229,15 @@ export default function RecordTab({
         dist = parseFloat(manualDistance);
         if (isNaN(dist)) return alert("距離は数値で入力してください");
         if (calcResult) method = 'Google Maps';
+
+        // 手入力モードでも距離表に値があれば最優先で上書き
+        if (useMatrix) {
+          const matrixDist = getMatrixDistance(distanceMatrix, lastRecord.destination, locName);
+          if (matrixDist > 0) {
+            dist = matrixDist;
+            method = '距離表';
+          }
+        }
       } else {
         dist = 0;
         method = '開始地点';
