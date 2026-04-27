@@ -8,7 +8,7 @@
  * @param {number} lng1 - 出発地の経度
  * @param {number} lat2 - 到着地の緯度
  * @param {number} lng2 - 到着地の経度
- * @returns {number} 距離 (km, 小数点第2位まで)
+ * @returns {number} 距離 (km, 四捨五入で整数)
  */
 export const calculateGeoDistance = (lat1, lng1, lat2, lng2) => {
   if (!lat1 || !lng1 || !lat2 || !lng2) return 0;
@@ -20,7 +20,7 @@ export const calculateGeoDistance = (lat1, lng1, lat2, lng2) => {
     Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c * 100) / 100;
+  return Math.round(R * c);
 };
 
 /**

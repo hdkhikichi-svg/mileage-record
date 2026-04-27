@@ -84,7 +84,7 @@ export const calculateDrivingDistance = (originQuery, destinationQuery) => {
         if (status === 'OK' && result.routes.length > 0) {
           const leg = result.routes[0].legs[0];
           resolve({
-            distanceKm: Math.round(leg.distance.value / 10) / 100,  // メートル → km（小数第2位）
+            distanceKm: Math.round(leg.distance.value / 1000),  // メートル → km（四捨五入で整数）
             distanceText: leg.distance.text,                          // "12.3 km" 形式
             durationText: leg.duration.text,                          // "約15分" 形式
             startAddress: leg.start_address,                          // 正規化された出発地住所
