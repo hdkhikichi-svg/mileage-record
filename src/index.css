@@ -1347,3 +1347,102 @@ body {
   color: var(--gray-600);
   line-height: 1.5;
 }
+
+/* === 27. カレンダー (履歴タブ) === */
+.calendar-container {
+  background: white;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--gray-200);
+}
+
+.calendar-day-header {
+  background: var(--gray-50);
+  text-align: center;
+  padding: 0.5rem 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gray-500);
+}
+
+.calendar-day {
+  background: white;
+  min-height: 50px;
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.calendar-day:hover:not(.empty-cell) {
+  background: var(--gray-50);
+}
+
+.calendar-day.empty-cell {
+  background: white;
+  cursor: default;
+}
+
+.calendar-day__num {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: auto;
+}
+
+.calendar-day__dist {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--primary-600);
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.calendar-day--active {
+  background: var(--primary-50);
+}
+
+.calendar-day--active:hover {
+  background: var(--primary-100);
+}
+
+.calendar-day--selected {
+  background: var(--primary-100);
+  box-shadow: inset 0 0 0 2px var(--primary-500);
+}
+
+.calendar-day--selected:hover {
+  background: var(--primary-100);
+}
+
+.calendar-day--empty {
+  background: var(--gray-50);
+}
+
+.calendar-day--empty:hover {
+  background: var(--gray-100);
+}
+
+.calendar-day--empty .calendar-day__num {
+  color: var(--gray-400);
+}
+
+.calendar-day--today .calendar-day__num {
+  background: var(--primary-600);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
