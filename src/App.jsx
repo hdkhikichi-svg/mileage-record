@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DEFAULT_BASE_LOCATION, DEFAULT_PRESETS, getTodayString } from './utils/constants';
 import { loadRecords, saveRecords, loadSettings, saveSettings, generateId } from './utils/storage';
+import { calculateGeoDistance, getMatrixDistance } from './utils/distance';
+import { loadGoogleMapsAPI, calculateDrivingDistance, buildSearchQuery } from './utils/googleMaps';
 import Header from './components/Header';
 import RecordTab from './components/RecordTab';
 import HistoryTab from './components/HistoryTab';
@@ -104,8 +106,10 @@ export default function App() {
     setEditingRecord(null);
   };
 
-  /** 記録の並べ替え（ドラッグ&ドロップ） */
-  const reorderRecords = (activeId, overId) => {
+  /** 記録の並べ替え（ドラッグ&ドロップ）+ 距離再計算 */
+  const reorderRecords = async (activeId, overId) => {
+    // ステップ1: 並べ替え + 即座にGPS/マトリクスで距離再計算
+    let reorderedList = [];
     setRecords(prev => {
       const today = getTodayString();
       const todayRecs = prev
@@ -124,13 +128,73 @@ export default function App() {
 
       // タイムスタンプを振り直して順序を維持
       const baseTime = new Date(reordered[0].timestamp).getTime();
-      const updated = reordered.map((rec, idx) => ({
-        ...rec,
-        timestamp: new Date(baseTime + idx * 1000).toISOString()
-      }));
 
+      // 距離を即座に再計算（GPS/マトリクス）
+      const updated = reordered.map((rec, idx) => {
+        const newTimestamp = new Date(baseTime + idx * 1000).toISOString();
+        if (idx === 0) {
+          // 最初の記録（出発地点）は距離0
+          return { ...rec, timestamp: newTimestamp, distance: 0, method: '開始地点' };
+        }
+        const prevRec = reordered[idx - 1];
+        let newDist = 0;
+        let newMethod = rec.method;
+
+        // マトリクスから計算
+        if (settings.useMatrix) {
+          newDist = getMatrixDistance(settings.distanceMatrix, prevRec.destination, rec.destination);
+          if (newDist > 0) newMethod = '距離表';
+        }
+        // GPS座標から概算
+        if (newDist === 0 && prevRec.lat && prevRec.lng && rec.lat && rec.lng) {
+          newDist = calculateGeoDistance(prevRec.lat, prevRec.lng, rec.lat, rec.lng);
+          if (newDist > 0) newMethod = 'GPS概算';
+        }
+        // どちらもダメなら距離0（後でGoogle Maps再計算）
+        if (newDist === 0) newMethod = '再計算待ち';
+
+        return { ...rec, timestamp: newTimestamp, distance: newDist, method: newMethod };
+      });
+
+      reorderedList = updated;
       return [...otherRecs, ...updated];
     });
+
+    // ステップ2: Google Maps APIで非同期に再計算（APIキーがある場合のみ）
+    if (settings.googleMapsApiKey && reorderedList.length > 1) {
+      try {
+        await loadGoogleMapsAPI(settings.googleMapsApiKey);
+        const gmUpdates = [];
+
+        for (let i = 1; i < reorderedList.length; i++) {
+          const prev = reorderedList[i - 1];
+          const curr = reorderedList[i];
+          const originQuery = buildSearchQuery(prev.address, prev.destination);
+          const destQuery = buildSearchQuery(curr.address, curr.destination);
+
+          if (originQuery && destQuery) {
+            try {
+              const result = await calculateDrivingDistance(originQuery, destQuery);
+              gmUpdates.push({ id: curr.id, distance: result.distanceKm, method: 'Google Maps' });
+            } catch {
+              // 個別の失敗はスキップ（GPS/マトリクスの値を維持）
+            }
+          }
+        }
+
+        // Google Maps結果で上書き
+        if (gmUpdates.length > 0) {
+          setRecords(prev =>
+            prev.map(r => {
+              const gm = gmUpdates.find(u => u.id === r.id);
+              return gm ? { ...r, distance: gm.distance, method: gm.method } : r;
+            })
+          );
+        }
+      } catch {
+        // API読み込み失敗時はGPS/マトリクスの値をそのまま使用
+      }
+    }
   };
 
   /** 設定を更新 */
