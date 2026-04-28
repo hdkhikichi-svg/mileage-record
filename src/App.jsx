@@ -44,6 +44,7 @@ export default function App() {
   const [editingRecord, setEditingRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(getTodayString()); // 全体で共有する選択日付
 
   // === 初期読み込み（Firebase Auth 監視） ===
   useEffect(() => {
@@ -221,6 +222,12 @@ export default function App() {
     saveSettings(newSettings, currentUser?.uid);
   };
 
+  /** 履歴カレンダーから日付を選択して記録タブへ移動 */
+  const handleDateSelectFromHistory = (dateStr) => {
+    setSelectedDate(dateStr);
+    setActiveTab('record');
+  };
+
   if (isInitializing) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--gray-500)' }}>読み込み中...</div>;
   }
@@ -264,6 +271,8 @@ export default function App() {
             onEdit={setEditingRecord}
             onDelete={setDeleteTargetId}
             onReorder={reorderRecords}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
           />
         )}
 
@@ -272,6 +281,8 @@ export default function App() {
             records={records}
             onEdit={setEditingRecord}
             onDelete={setDeleteTargetId}
+            selectedDate={selectedDate}
+            onDateSelect={handleDateSelectFromHistory}
           />
         )}
 

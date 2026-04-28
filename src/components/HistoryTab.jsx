@@ -24,7 +24,7 @@ import { ja } from 'date-fns/locale';
  *   onDelete: (id: string) => void
  * }} props
  */
-export default function HistoryTab({ records, onEdit, onDelete }) {
+export default function HistoryTab({ records, onEdit, onDelete, selectedDate, onDateSelect }) {
   // 現在の「対象月（締め月）」の基準日（何月の15日締めかを示すために15日を基準にする）
   const [currentPeriod, setCurrentPeriod] = useState(() => {
     const today = new Date();
@@ -35,7 +35,6 @@ export default function HistoryTab({ records, onEdit, onDelete }) {
     return new Date(today.getFullYear(), today.getMonth(), 15);
   });
 
-  const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [isExporting, setIsExporting] = useState(false);
 
   // 16日〜15日の期間を計算
@@ -145,7 +144,7 @@ export default function HistoryTab({ records, onEdit, onDelete }) {
                 <div 
                   key={dateStr} 
                   className={classes}
-                  onClick={() => setSelectedDate(dateStr)}
+                  onClick={() => onDateSelect(dateStr)}
                 >
                   <span className="calendar-day__num">{format(day, 'd')}</span>
                   {hasRecords && (

@@ -33,7 +33,9 @@ export default function RecordTab({
   updateSettings,
   onEdit,
   onDelete,
-  onReorder
+  onReorder,
+  selectedDate,
+  setSelectedDate
 }) {
   const {
     locationList,
@@ -46,7 +48,6 @@ export default function RecordTab({
   } = settings;
 
   // --- ローカルState ---
-  const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [inputMode, setInputMode] = useState('list');
   const [targetLocation, setTargetLocation] = useState('');
 
