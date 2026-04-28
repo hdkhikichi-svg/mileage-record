@@ -77,31 +77,7 @@ export default function App() {
     setIsDataLoaded(true);
   };
 
-  // 初回保存を防ぐためのフラグ
-  const isInitialLoad = useRef(true);
-
-  // === データ永続化: 記録 ===
-  useEffect(() => {
-    if (!isDataLoaded) return; // データロード前は保存しない
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      return;
-    }
-    const uid = currentUser ? currentUser.uid : null;
-    saveRecords(records, uid);
-  }, [records]);
-
-  // === データ永続化: 設定 ===
-  const isInitialSettingsLoad = useRef(true);
-  useEffect(() => {
-    if (!isDataLoaded) return; // データロード前は保存しない
-    if (isInitialSettingsLoad.current) {
-      isInitialSettingsLoad.current = false;
-      return;
-    }
-    const uid = currentUser ? currentUser.uid : null;
-    saveSettings(settings, uid);
-  }, [settings]);
+  // 自動保存のuseEffectは廃止し、各アクション内で明示的に保存します
 
   // === 計算値 ===
   const todayTotalDistance = useMemo(() => {
@@ -117,97 +93,99 @@ export default function App() {
   /** 記録を追加 */
   const addRecord = (record) => {
     const newRecord = { ...record, id: generateId() };
-    setRecords(prev => [...prev, newRecord]);
+    const newRecords = [...records, newRecord];
+    setRecords(newRecords);
+    saveRecords(newRecords, currentUser?.uid);
   };
 
   /** 記録を削除 */
   const deleteRecord = () => {
     if (!deleteTargetId) return;
-    setRecords(prev => prev.filter(r => r.id !== deleteTargetId));
+    const newRecords = records.filter(r => r.id !== deleteTargetId);
+    setRecords(newRecords);
+    saveRecords(newRecords, currentUser?.uid);
     setDeleteTargetId(null);
   };
 
   /** 記録を更新 */
   const updateRecord = (id, data) => {
-    setRecords(prev =>
-      prev.map(r =>
-        r.id === id
-          ? {
-              ...r,
-              destination: data.destination,
-              address: data.address,
-              distance: parseFloat(data.distance) || 0,
-              method: data.method || r.method
-            }
-          : r
-      )
+    const newRecords = records.map(r =>
+      r.id === id
+        ? {
+            ...r,
+            destination: data.destination,
+            address: data.address,
+            distance: parseFloat(data.distance) || 0,
+            method: data.method || r.method
+          }
+        : r
     );
+    setRecords(newRecords);
+    saveRecords(newRecords, currentUser?.uid);
     setEditingRecord(null);
   };
 
   /** 記録の並べ替え（ドラッグ&ドロップ）+ 距離再計算 */
   const reorderRecords = async (activeId, overId) => {
     // ステップ1: 並べ替え + 即座にGPS/マトリクスで距離再計算
-    let reorderedList = [];
-    setRecords(prev => {
-      const today = getTodayString();
-      const todayRecs = prev
-        .filter(r => r.date === today)
-        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      const otherRecs = prev.filter(r => r.date !== today);
+    const today = getTodayString();
+    const todayRecs = records
+      .filter(r => r.date === today)
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const otherRecs = records.filter(r => r.date !== today);
 
-      const oldIndex = todayRecs.findIndex(r => r.id === activeId);
-      const newIndex = todayRecs.findIndex(r => r.id === overId);
-      if (oldIndex === -1 || newIndex === -1) return prev;
+    const oldIndex = todayRecs.findIndex(r => r.id === activeId);
+    const newIndex = todayRecs.findIndex(r => r.id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-      // 配列内で要素を移動
-      const reordered = [...todayRecs];
-      const [moved] = reordered.splice(oldIndex, 1);
-      reordered.splice(newIndex, 0, moved);
+    // 配列内で要素を移動
+    const reordered = [...todayRecs];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
 
-      // タイムスタンプを振り直して順序を維持
-      const baseTime = new Date(reordered[0].timestamp).getTime();
+    // タイムスタンプを振り直して順序を維持
+    const baseTime = new Date(reordered[0].timestamp).getTime();
 
-      // 距離を即座に再計算（GPS/マトリクス）
-      const updated = reordered.map((rec, idx) => {
-        const newTimestamp = new Date(baseTime + idx * 1000).toISOString();
-        if (idx === 0) {
-          // 最初の記録（出発地点）は距離0
-          return { ...rec, timestamp: newTimestamp, distance: 0, method: '開始地点' };
-        }
-        const prevRec = reordered[idx - 1];
-        let newDist = 0;
-        let newMethod = rec.method;
+    // 距離を即座に再計算（GPS/マトリクス）
+    const updated = reordered.map((rec, idx) => {
+      const newTimestamp = new Date(baseTime + idx * 1000).toISOString();
+      if (idx === 0) {
+        // 最初の記録（出発地点）は距離0
+        return { ...rec, timestamp: newTimestamp, distance: 0, method: '開始地点' };
+      }
+      const prevRec = reordered[idx - 1];
+      let newDist = 0;
+      let newMethod = rec.method;
 
-        // マトリクスから計算
-        if (settings.useMatrix) {
-          newDist = getMatrixDistance(settings.distanceMatrix, prevRec.destination, rec.destination);
-          if (newDist > 0) newMethod = '距離表';
-        }
-        // GPS座標から概算
-        if (newDist === 0 && prevRec.lat && prevRec.lng && rec.lat && rec.lng) {
-          newDist = calculateGeoDistance(prevRec.lat, prevRec.lng, rec.lat, rec.lng);
-          if (newDist > 0) newMethod = 'GPS概算';
-        }
-        // どちらもダメなら距離0（後でGoogle Maps再計算）
-        if (newDist === 0) newMethod = '再計算待ち';
+      // マトリクスから計算
+      if (settings.useMatrix) {
+        newDist = getMatrixDistance(settings.distanceMatrix, prevRec.destination, rec.destination);
+        if (newDist > 0) newMethod = '距離表';
+      }
+      // GPS座標から概算
+      if (newDist === 0 && prevRec.lat && prevRec.lng && rec.lat && rec.lng) {
+        newDist = calculateGeoDistance(prevRec.lat, prevRec.lng, rec.lat, rec.lng);
+        if (newDist > 0) newMethod = 'GPS概算';
+      }
+      // どちらもダメなら距離0（後でGoogle Maps再計算）
+      if (newDist === 0) newMethod = '再計算待ち';
 
-        return { ...rec, timestamp: newTimestamp, distance: newDist, method: newMethod };
-      });
-
-      reorderedList = updated;
-      return [...otherRecs, ...updated];
+      return { ...rec, timestamp: newTimestamp, distance: newDist, method: newMethod };
     });
 
+    const newRecords = [...otherRecs, ...updated];
+    setRecords(newRecords);
+    saveRecords(newRecords, currentUser?.uid);
+
     // ステップ2: Google Maps APIで非同期に再計算（APIキーがある場合のみ）
-    if (settings.googleMapsApiKey && reorderedList.length > 1) {
+    if (settings.googleMapsApiKey && updated.length > 1) {
       try {
         await loadGoogleMapsAPI(settings.googleMapsApiKey);
         const gmUpdates = [];
 
-        for (let i = 1; i < reorderedList.length; i++) {
-          const prev = reorderedList[i - 1];
-          const curr = reorderedList[i];
+        for (let i = 1; i < updated.length; i++) {
+          const prev = updated[i - 1];
+          const curr = updated[i];
           const originQuery = buildSearchQuery(prev.address, prev.destination);
           const destQuery = buildSearchQuery(curr.address, curr.destination);
 
@@ -216,19 +194,19 @@ export default function App() {
               const result = await calculateDrivingDistance(originQuery, destQuery);
               gmUpdates.push({ id: curr.id, distance: result.distanceKm, method: 'Google Maps' });
             } catch {
-              // 個別の失敗はスキップ（GPS/マトリクスの値を維持）
+              // 個別の失敗はスキップ
             }
           }
         }
 
         // Google Maps結果で上書き
         if (gmUpdates.length > 0) {
-          setRecords(prev =>
-            prev.map(r => {
-              const gm = gmUpdates.find(u => u.id === r.id);
-              return gm ? { ...r, distance: gm.distance, method: gm.method } : r;
-            })
-          );
+          const finalRecords = newRecords.map(r => {
+            const gm = gmUpdates.find(u => u.id === r.id);
+            return gm ? { ...r, distance: gm.distance, method: gm.method } : r;
+          });
+          setRecords(finalRecords);
+          saveRecords(finalRecords, currentUser?.uid);
         }
       } catch {
         // API読み込み失敗時はGPS/マトリクスの値をそのまま使用
@@ -238,7 +216,9 @@ export default function App() {
 
   /** 設定を更新 */
   const updateSettings = (updates) => {
-    setSettings(prev => ({ ...prev, ...updates }));
+    const newSettings = { ...settings, ...updates };
+    setSettings(newSettings);
+    saveSettings(newSettings, currentUser?.uid);
   };
 
   if (isInitializing) {
