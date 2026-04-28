@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DEFAULT_BASE_LOCATION, DEFAULT_PRESETS, getTodayString } from './utils/constants';
 import { loadRecords, saveRecords, loadSettings, saveSettings, generateId } from './utils/storage';
 import { calculateGeoDistance, getMatrixDistance } from './utils/distance';
 import { loadGoogleMapsAPI, calculateDrivingDistance, buildSearchQuery } from './utils/googleMaps';
+import { auth } from './utils/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import Header from './components/Header';
 import RecordTab from './components/RecordTab';
 import HistoryTab from './components/HistoryTab';
@@ -35,34 +37,64 @@ export default function App() {
     googleMapsApiKey: ''
   });
 
-  // === UI状態 ===
+  // === 認証・UI状態 ===
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [activeTab, setActiveTab] = useState('record');
   const [editingRecord, setEditingRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
 
-  // === 初期読み込み ===
+  // === 初期読み込み（Firebase Auth 監視） ===
   useEffect(() => {
-    const loadedRecords = loadRecords();
+    if (!auth) {
+      // Firebaseが未設定の場合はローカルモードで動作
+      loadData(null);
+      setIsInitializing(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      loadData(user ? user.uid : null);
+      setIsInitializing(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const loadData = async (uid) => {
+    const loadedRecords = await loadRecords(uid);
     setRecords(loadedRecords);
 
-    const loadedSettings = loadSettings();
+    const loadedSettings = await loadSettings(uid);
     if (loadedSettings) {
       setSettings(prev => ({ ...prev, ...loadedSettings }));
     }
-  }, []);
+  };
+
+  // 初回保存を防ぐためのフラグ
+  const isInitialLoad = useRef(true);
 
   // === データ永続化: 記録 ===
   useEffect(() => {
-    // 初回レンダリング時の空配列保存を防止
-    if (records.length > 0 || loadRecords().length > 0) {
-      saveRecords(records);
+    if (isInitialLoad.current) {
+      if (records.length > 0) isInitialLoad.current = false;
+      return;
     }
-  }, [records]);
+    const uid = currentUser ? currentUser.uid : null;
+    saveRecords(records, uid);
+  }, [records, currentUser]);
 
   // === データ永続化: 設定 ===
+  const isInitialSettingsLoad = useRef(true);
   useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
+    if (isInitialSettingsLoad.current) {
+      isInitialSettingsLoad.current = false;
+      return;
+    }
+    const uid = currentUser ? currentUser.uid : null;
+    saveSettings(settings, uid);
+  }, [settings, currentUser]);
 
   // === 計算値 ===
   const todayTotalDistance = useMemo(() => {
@@ -202,10 +234,14 @@ export default function App() {
     setSettings(prev => ({ ...prev, ...updates }));
   };
 
+  if (isInitializing) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--gray-500)' }}>読み込み中...</div>;
+  }
+
   return (
     <div className="app">
       {/* ヘッダー */}
-      <Header todayTotalDistance={todayTotalDistance} />
+      <Header todayTotalDistance={todayTotalDistance} currentUser={currentUser} />
 
       {/* メインコンテンツ */}
       <main className="main">
@@ -256,6 +292,7 @@ export default function App() {
           <SettingsTab
             settings={settings}
             updateSettings={updateSettings}
+            currentUser={currentUser}
           />
         )}
       </main>

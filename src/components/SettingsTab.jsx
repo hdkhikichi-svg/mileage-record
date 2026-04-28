@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   FileText, Upload, Settings, MapPin, Key,
-  CheckCircle, XCircle, RefreshCw
+  CheckCircle, XCircle, RefreshCw, Cloud, LogOut, LogIn
 } from 'lucide-react';
 import { parseCSV } from '../utils/csv';
 import {
@@ -9,17 +9,19 @@ import {
   resetGoogleMapsAPI,
   isGoogleMapsLoaded
 } from '../utils/googleMaps';
+import { signInWithGoogle, logOut } from '../utils/firebase';
 
 /**
  * 設定タブ
- * CSV距離データ取込、Google Maps APIキー設定、基本設定
+ * CSV距離データ取込、Google Maps APIキー設定、基本設定、クラウド同期
  * 
  * @param {{
  *   settings: Object,
- *   updateSettings: (updates: Object) => void
+ *   updateSettings: (updates: Object) => void,
+ *   currentUser: Object|null
  * }} props
  */
-export default function SettingsTab({ settings, updateSettings }) {
+export default function SettingsTab({ settings, updateSettings, currentUser }) {
   const { useMatrix, locationList, baseLocation, googleMapsApiKey } = settings;
 
   const [apiKeyInput, setApiKeyInput] = useState(googleMapsApiKey || '');
@@ -28,6 +30,25 @@ export default function SettingsTab({ settings, updateSettings }) {
     googleMapsApiKey ? (isGoogleMapsLoaded() ? 'connected' : 'idle') : 'idle'
   );
   const [isTesting, setIsTesting] = useState(false);
+
+  // --- クラウド同期 ---
+  const handleLogin = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      alert("ログインに失敗しました。Firebaseの設定やネットワークを確認してください。");
+    }
+  };
+
+  const handleLogout = async () => {
+    if (confirm("ログアウトしますか？未保存のローカルデータはクラウドと同期されません。")) {
+      try {
+        await logOut();
+      } catch (error) {
+        alert("ログアウトに失敗しました。");
+      }
+    }
+  };
 
   // --- CSV読み込み ---
   const handleFileUpload = (event) => {
@@ -89,6 +110,34 @@ export default function SettingsTab({ settings, updateSettings }) {
 
   return (
     <div className="animate-in space-y">
+      {/* === クラウド同期 === */}
+      <div className="card">
+        <h3 className="card__title">
+          <Cloud size={16} className="card__title-icon" />
+          クラウド同期
+        </h3>
+        <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginBottom: '1rem' }}>
+          Googleアカウントでログインすると、スマホとパソコンでデータを同期できます。
+        </p>
+        
+        {currentUser ? (
+          <div className="info-box info-box--green" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <img src={currentUser.photoURL} alt="User" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{currentUser.displayName}</span>
+            </div>
+            <button className="btn btn--outline btn--sm" onClick={handleLogout} style={{ padding: '0.25rem 0.5rem' }}>
+              <LogOut size={14} />
+              ログアウト
+            </button>
+          </div>
+        ) : (
+          <button className="btn btn--primary" onClick={handleLogin} style={{ width: '100%', justifyContent: 'center' }}>
+            <LogIn size={16} />
+            Googleでログインして同期
+          </button>
+        )}
+      </div>
       {/* === 距離データ取り込み === */}
       <div className="card">
         <h3 className="card__title">
