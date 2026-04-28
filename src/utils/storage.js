@@ -36,6 +36,7 @@ export const loadRecords = async (uid = null) => {
     return records;
   } catch (error) {
     console.error("loadRecords error:", error);
+    alert("同期エラー(読み込み): " + error.message);
     return [];
   }
 };
@@ -57,6 +58,7 @@ export const saveRecords = async (records, uid = null) => {
     }
   } catch (error) {
     console.error("saveRecords error:", error);
+    alert("同期エラー(保存): " + error.message);
   }
 };
 
@@ -83,6 +85,7 @@ export const loadSettings = async (uid = null) => {
     }
   } catch (error) {
     console.error("loadSettings error:", error);
+    alert("同期エラー(設定読み込み): " + error.message);
     return null;
   }
 };
@@ -102,6 +105,7 @@ export const saveSettings = async (settings, uid = null) => {
     }
   } catch (error) {
     console.error("saveSettings error:", error);
+    alert("同期エラー(設定): " + error.message);
   }
 };
 
