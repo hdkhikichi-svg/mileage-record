@@ -43,6 +43,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('record');
   const [editingRecord, setEditingRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // === 初期読み込み（Firebase Auth 監視） ===
   useEffect(() => {
@@ -63,6 +64,8 @@ export default function App() {
   }, []);
 
   const loadData = async (uid) => {
+    setIsDataLoaded(false);
+    
     const loadedRecords = await loadRecords(uid);
     setRecords(loadedRecords);
 
@@ -70,6 +73,8 @@ export default function App() {
     if (loadedSettings) {
       setSettings(prev => ({ ...prev, ...loadedSettings }));
     }
+    
+    setIsDataLoaded(true);
   };
 
   // 初回保存を防ぐためのフラグ
@@ -77,24 +82,26 @@ export default function App() {
 
   // === データ永続化: 記録 ===
   useEffect(() => {
+    if (!isDataLoaded) return; // データロード前は保存しない
     if (isInitialLoad.current) {
-      if (records.length > 0) isInitialLoad.current = false;
+      isInitialLoad.current = false;
       return;
     }
     const uid = currentUser ? currentUser.uid : null;
     saveRecords(records, uid);
-  }, [records, currentUser]);
+  }, [records]);
 
   // === データ永続化: 設定 ===
   const isInitialSettingsLoad = useRef(true);
   useEffect(() => {
+    if (!isDataLoaded) return; // データロード前は保存しない
     if (isInitialSettingsLoad.current) {
       isInitialSettingsLoad.current = false;
       return;
     }
     const uid = currentUser ? currentUser.uid : null;
     saveSettings(settings, uid);
-  }, [settings, currentUser]);
+  }, [settings]);
 
   // === 計算値 ===
   const todayTotalDistance = useMemo(() => {
