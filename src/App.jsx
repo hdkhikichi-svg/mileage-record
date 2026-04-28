@@ -222,9 +222,13 @@ export default function App() {
     saveSettings(newSettings, currentUser?.uid);
   };
 
-  /** 履歴カレンダーから日付を選択して記録タブへ移動 */
+  /** 履歴カレンダーから日付を選択 */
   const handleDateSelectFromHistory = (dateStr) => {
     setSelectedDate(dateStr);
+  };
+
+  /** 履歴タブから記録タブへ移動 */
+  const handleMoveToRecordTab = () => {
     setActiveTab('record');
   };
 
@@ -283,6 +287,7 @@ export default function App() {
             onDelete={setDeleteTargetId}
             selectedDate={selectedDate}
             onDateSelect={handleDateSelectFromHistory}
+            onMoveToRecord={handleMoveToRecordTab}
           />
         )}
 

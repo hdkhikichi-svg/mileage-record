@@ -24,7 +24,7 @@ import { ja } from 'date-fns/locale';
  *   onDelete: (id: string) => void
  * }} props
  */
-export default function HistoryTab({ records, onEdit, onDelete, selectedDate, onDateSelect }) {
+export default function HistoryTab({ records, onEdit, onDelete, selectedDate, onDateSelect, onMoveToRecord }) {
   // 現在の「対象月（締め月）」の基準日（何月の15日締めかを示すために15日を基準にする）
   const [currentPeriod, setCurrentPeriod] = useState(() => {
     const today = new Date();
@@ -176,11 +176,20 @@ export default function HistoryTab({ records, onEdit, onDelete, selectedDate, on
 
       {/* 選択された日の記録一覧 */}
       <div className="space-y-sm">
-        <h4 style={{ fontSize: '0.9rem', color: 'var(--gray-700)', padding: '0 0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+        <h4 style={{ fontSize: '0.9rem', color: 'var(--gray-700)', padding: '0 0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>{format(parseISO(selectedDate), 'M月d日 (E)', { locale: ja })} の記録</span>
-          {dailyDistanceMap[selectedDate] > 0 && (
-            <span style={{ color: 'var(--primary-600)', fontWeight: 700 }}>{dailyDistanceMap[selectedDate].toFixed(2)} km</span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {dailyDistanceMap[selectedDate] > 0 && (
+              <span style={{ color: 'var(--primary-600)', fontWeight: 700 }}>{dailyDistanceMap[selectedDate].toFixed(2)} km</span>
+            )}
+            <button 
+              className="btn btn--primary" 
+              style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem', minHeight: 'auto' }}
+              onClick={onMoveToRecord}
+            >
+              変更
+            </button>
+          </div>
         </h4>
 
         {selectedDateRecords.length === 0 ? (
