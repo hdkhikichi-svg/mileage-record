@@ -120,7 +120,10 @@ export default function RecordTab({
 
   // --- Google Maps 距離自動算出 ---
   const handleAutoCalculate = async () => {
-    if (!googleMapsApiKey) return;
+    if (!googleMapsApiKey) {
+      setCalcError('Google Maps APIキーが設定されていません。設定タブで登録してください。');
+      return;
+    }
 
     let originQuery = '';
     let destQuery = '';
@@ -146,15 +149,33 @@ export default function RecordTab({
     setCalcError('');
     setCalcResult(null);
 
+    console.log('[自動算出] 開始:', { originQuery, destQuery });
+
+    // フェイルセーフ: 万が一 try/catch/finally をすり抜けても20秒後にリセット
+    const failsafeTimer = setTimeout(() => {
+      console.warn('[自動算出] フェイルセーフタイムアウト (20秒) 発動');
+      setIsCalculating(false);
+      setCalcError('計算処理がタイムアウトしました。再度お試しください。');
+    }, 20000);
+
     try {
       await loadGoogleMapsAPI(googleMapsApiKey);
+      console.log('[自動算出] API読み込み完了、距離計算開始...');
       const result = await calculateDrivingDistance(originQuery, destQuery);
+      console.log('[自動算出] 計算成功:', result);
       setCalcResult(result);
       setManualDistance(result.distanceKm.toString());
     } catch (err) {
-      setCalcError(err.message);
+      console.error('[自動算出] エラー:', err);
+      // err が Error オブジェクトでない場合にも対応
+      const message = (err && typeof err === 'object' && err.message)
+        ? err.message
+        : (typeof err === 'string' ? err : '不明なエラーが発生しました。再度お試しください。');
+      setCalcError(message);
     } finally {
+      clearTimeout(failsafeTimer);
       setIsCalculating(false);
+      console.log('[自動算出] 処理完了 (isCalculating = false)');
     }
   };
 
