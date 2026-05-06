@@ -67,7 +67,7 @@ export const exportToXLSX = async (filteredRecords, filterStartDate, filterEndDa
   // --- 総移動距離 ---
   worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
   const totalDistLabel = worksheet.getCell(`A${currentRow}`);
-  totalDistLabel.value = `総移動距離: ${grandTotalDistance.toFixed(2)} km`;
+  totalDistLabel.value = `総移動距離: ${Math.round(grandTotalDistance)} km`;
   totalDistLabel.font = { size: 20, bold: true };
   totalDistLabel.alignment = { horizontal: 'left', vertical: 'bottom' };
   currentRow += 2;
@@ -128,7 +128,7 @@ export const exportToXLSX = async (filteredRecords, filterStartDate, filterEndDa
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
     cell.border = borderStyle;
   });
-  totalRow.getCell(headerValues.length).numFmt = '0.00';
+  totalRow.getCell(headerValues.length).numFmt = '0';
 
   // --- カラム幅 ---
   worksheet.columns.forEach((col, i) => {

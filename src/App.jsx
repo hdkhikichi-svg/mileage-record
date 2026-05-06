@@ -83,10 +83,10 @@ export default function App() {
   // === 計算値 ===
   const todayTotalDistance = useMemo(() => {
     const today = getTodayString();
-    return records
+    const total = records
       .filter(r => r.date === today)
-      .reduce((sum, r) => sum + r.distance, 0)
-      .toFixed(2);
+      .reduce((sum, r) => sum + r.distance, 0);
+    return Math.round(total);
   }, [records]);
 
   // === アクション ===

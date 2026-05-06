@@ -260,7 +260,7 @@ export default function FlowChart({ dayRecords, baseLocation, onEdit, onDelete, 
         <div className="flow__total">
           <span className="flow__total-label">本日の総移動距離:</span>
           <span className="flow__total-value">
-            {sorted.reduce((sum, r) => sum + r.distance, 0).toFixed(2)}
+            {Math.round(sorted.reduce((sum, r) => sum + r.distance, 0))}
           </span>
           <span className="flow__total-unit"> km</span>
         </div>

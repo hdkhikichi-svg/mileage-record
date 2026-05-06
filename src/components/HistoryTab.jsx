@@ -75,9 +75,9 @@ export default function HistoryTab({ records, onEdit, onDelete, selectedDate, on
 
   // 期間合計距離
   const periodTotalDistance = useMemo(() => {
-    return periodRecords
-      .reduce((sum, r) => sum + r.distance, 0)
-      .toFixed(2);
+    const total = periodRecords
+      .reduce((sum, r) => sum + r.distance, 0);
+    return Math.round(total);
   }, [periodRecords]);
 
   // 前月/次月への移動
@@ -148,7 +148,7 @@ export default function HistoryTab({ records, onEdit, onDelete, selectedDate, on
                 >
                   <span className="calendar-day__num">{format(day, 'd')}</span>
                   {hasRecords && (
-                    <span className="calendar-day__dist">{dailyDistanceMap[dateStr].toFixed(1)}</span>
+                    <span className="calendar-day__dist">{Math.round(dailyDistanceMap[dateStr])}</span>
                   )}
                 </div>
               );
@@ -180,7 +180,7 @@ export default function HistoryTab({ records, onEdit, onDelete, selectedDate, on
           <span>{format(parseISO(selectedDate), 'M月d日 (E)', { locale: ja })} の記録</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {dailyDistanceMap[selectedDate] > 0 && (
-              <span style={{ color: 'var(--primary-600)', fontWeight: 700 }}>{dailyDistanceMap[selectedDate].toFixed(2)} km</span>
+              <span style={{ color: 'var(--primary-600)', fontWeight: 700 }}>{Math.round(dailyDistanceMap[selectedDate])} km</span>
             )}
             <button 
               className="btn btn--primary" 
